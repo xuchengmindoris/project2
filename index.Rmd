@@ -130,6 +130,7 @@ fviz_pca_biplot(pca_data_wage2, col.ind = data_wage$married, ) + coord_fixed()
 fviz_pca_biplot(pca_data_wage2, col.ind = data_wage$black, ) + coord_fixed()
 fviz_pca_biplot(pca_data_wage2, col.ind = data_wage$urban, ) + coord_fixed()
 
+#gower dissimilarities
 ```
 
 Discussions of PCA here. 
@@ -138,10 +139,44 @@ Discussions of PCA here.
 
 ```{R}
 # linear classifier code here
+#logistic regression
+class_dat <- data_wage %>% select(married, wage:age)
+glimpse(class_dat) 
+fit<-glm(married ~ . , data=class_dat, family="binomial") 
+probs <- predict(fit, type="response")
+probs
+class_diag(probs, truth =class_dat$married, positive=1)
+y_hat <- ifelse(probs>0.5,"1","0")
+y_hat <- factor(y_hat, levels=c("0","1"))
+table(truth = class_dat$married, predictions=y_hat)
+
+#table
+
 ```
 
 ```{R}
 # cross-validation of linear classifier here
+#K-fold CV
+k=10 
+data<-sample_frac(class_dat)
+folds<-rep(1:k,length.out=nrow(data))
+
+diags<-NULL
+
+i=1
+
+for(i in 1:k){
+train<-data[folds!=i,]
+test<-data[folds==i,]
+truth<-test$married
+
+fit<-glm(married~.,data=train,family="binomial")
+probs<-predict(fit,newdata = test,type="response")
+diags<-rbind(diags,class_diag(probs,truth, positive=1))
+}
+summarize_all(diags,mean)
+
+
 ```
 
 Discussion here
@@ -151,10 +186,39 @@ Discussion here
 ```{R}
 library(caret)
 # non-parametric classifier code here
+class_dat <- data_wage %>% select(married, wage:age)
+knn_fit <- knn3(married ~ ., data = class_dat)
+probs_knn <- predict(knn_fit, class_dat)[, 2]
+probs_knn
+class_diag(probs_knn, class_dat$married, positive = 1)
+y_hat_knn <- ifelse(probs_knn>0.5,"1","0")
+y_hat_knn <- factor(y_hat_knn, levels=c("0","1"))
+table(truth = class_dat$married, predictions=y_hat_knn)
+
 ```
 
 ```{R}
 # cross-validation of np classifier here
+library(caret)
+k=10 
+data<-sample_frac(class_dat)
+folds<-rep(1:k,length.out=nrow(data))
+
+diags<-NULL
+
+i=1
+
+for(i in 1:k){
+train<-data[folds!=i,]
+test<-data[folds==i,]
+truth<-test$married
+
+knn_fit<-knn3(married~.,data=train)
+probs_knn<-predict(knn_fit,newdata = test)[,2]
+
+diags<-rbind(diags,class_diag(probs_knn,truth, positive=1))
+}
+summarize_all(diags,mean)
 ```
 
 Discussion
