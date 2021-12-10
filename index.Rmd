@@ -53,7 +53,7 @@ class_diag <- function(score, truth, positive, cutoff=.5){
 Paragraph or two introducing your datasets and variables, why they are interesting to you, etc. See instructions for more information
 
 Introduction:
-Graduation is approaching, one of the most important things come to my mind is job. Getting a good job and earning good salary are dreams for everyone. But, what factors actually affect wage? Does education really matter? What about IQ and other factors? These questions rouse my interest in exploring the relationship between wage and these factors by using data software(e.g. R-Studio and Python) to analyze.  
+Graduation is approaching, one of the most important things come to my mind is job. Getting a good job and earning good salary are dreams for everyone. But, what factors actually affect wage? Does education really matter? What about IQ and other factors?What would predictions look like based on the current data? These questions rouse my interest in exploring the relationship between wage and these factors by using data software(e.g. R-Studio and Python) to analyze.  
 
 The data set we use in this project is the publicly available data from a research of my major.It is a survey over 200 adults and contains 13 variables.The main variables include "wage"( monthly earnings), "hour"(average weekly hours),"IQ"(IQ score), "exper"(years of work experience),"age"(age in years), "married"(=1 if married), "black"(=1 if black), "urtban"(=1 if live in SMSA)etc.There are 24 observations for unmarried people, and 176 observations for married people;165 observations for non-black people, and 35 observations for black people.
 
@@ -149,7 +149,6 @@ class_diag(probs, truth =class_dat$married, positive=1)
 y_hat <- ifelse(probs>0.5,"1","0")
 y_hat <- factor(y_hat, levels=c("0","1"))
 table(truth = class_dat$married, predictions=y_hat)
-
 #table
 
 ```
@@ -228,10 +227,37 @@ Discussion
 
 ```{R}
 # regression model code here
+
+fit_linear <- lm(IQ ~educ+KWW+exper,data=data_wage)
+props_linear <- predict(fit_linear)
+props_linear
+
+fit_linear_sum <-summary(fit_linear)
+mean(fit_linear_sum$residuals^2)
+
 ```
 
 ```{R}
 # cross-validation of regression model here
+k=10 
+data<-sample_frac(data_wage)
+folds<-rep(1:k,length.out=nrow(data))
+
+MSE<-NULL
+
+i=1
+
+for(i in 1:k){
+train<-data[folds!=i,]
+test<-data[folds==i,]
+
+fit_linear <- lm(IQ ~educ+KWW+exper,data=train)
+probs_linear<-predict(fit_linear ,newdata = test,type="response")
+MSE<-rbind(MSE,mean(summary(fit_linear)$residuals^2))
+}
+
+mean(MSE)
+
 ```
 
 Discussion
@@ -240,10 +266,22 @@ Discussion
 
 ```{R}
 library(reticulate)
+use_python("/usr/bin/python3", required = F)
+wage_median<-median(data_wage$wage)
+wage_mean<-mean(data_wage$wage)
 ```
 
 ```{python}
 # python code here
+next1="The median wage of our data set is"
+next2="The average wage of our data set is"
+print(next1, r.wage_median)
+```
+
+```{R}
+use_python("/usr/bin/python3", required = F)
+cat(c(py$next2 ,wage_mean))
+
 ```
 
 Discussion
