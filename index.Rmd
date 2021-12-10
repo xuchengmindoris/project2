@@ -55,16 +55,15 @@ Paragraph or two introducing your datasets and variables, why they are interesti
 Introduction:
 Graduation is approaching, one of the most important things come to my mind is job. Getting a good job and earning good salary are dreams for everyone. But, what factors actually affect wage? Does education really matter? What about IQ and other factors? These questions rouse my interest in exploring the relationship between wage and these factors by using data software(e.g. R-Studio and Python) to analyze.  
 
-The data set we use in this project is the publicly available data from a research of my major.It is a survey over 866 adults and contains 17 variables.The main variables include "wage"( monthly earnings), "hour"(average weekly hours),"IQ"(IQ score), "exper"(years of work experience),"age"(age in years),"meduc"(mother's education),"feduc"(father's education), "married"(=1 if married), "black"(=1 if black), etc.There are 92 observations for unmarried people, and 774 observations for married people;768 observations for non-black people, and 98 observations for black people.
+The data set we use in this project is the publicly available data from a research of my major.It is a survey over 200 adults and contains 14 variables.The main variables include "wage"( monthly earnings), "hour"(average weekly hours),"IQ"(IQ score), "exper"(years of work experience),"age"(age in years), "married"(=1 if married), "black"(=1 if black), etc.There are 92 observations for unmarried people, and 774 observations for married people;768 observations for non-black people, and 98 observations for black people.
 
 ```{R}
 library(tidyverse)
 # read your datasets in here, e.g., with read_csv()
-project2_data <- read_csv("project2 data.csv")
+data_wage <- read_csv("new.csv")
 
 # if your dataset needs tidying, do so here
 
-# any other code here
 ```
 
 ### Cluster Analysis
@@ -72,6 +71,24 @@ project2_data <- read_csv("project2 data.csv")
 ```{R}
 library(cluster)
 # clustering code here
+
+sil_width <- vector()
+for (i in 2:10) {
+    pam_fit <- pam(data_wage, k = i)
+    sil_width[i] <- pam_fit$silinfo$avg.width
+}
+ggplot() + geom_line(aes(x = 1:10, y = sil_width)) + 
+    scale_x_continuous(name = "k", breaks = 1:10)
+
+wage_pam <- data_wage%>%pam(k=3)
+plot(wage_pam)
+
+data_wage%>% slice(wage_pam$id.med)
+
+
+library(GGally)
+data_wage %>% mutate(cluster = as.factor(wage_pam$clustering)) %>% 
+    ggpairs(cols = 2:8, aes(color = cluster))
 ```
 
 Discussion of clustering here
