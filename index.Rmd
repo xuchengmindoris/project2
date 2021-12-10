@@ -55,14 +55,12 @@ Paragraph or two introducing your datasets and variables, why they are interesti
 Introduction:
 Graduation is approaching, one of the most important things come to my mind is job. Getting a good job and earning good salary are dreams for everyone. But, what factors actually affect wage? Does education really matter? What about IQ and other factors? These questions rouse my interest in exploring the relationship between wage and these factors by using data software(e.g. R-Studio and Python) to analyze.  
 
-The data set we use in this project is the publicly available data from a research of my major.It is a survey over 200 adults and contains 14 variables.The main variables include "wage"( monthly earnings), "hour"(average weekly hours),"IQ"(IQ score), "exper"(years of work experience),"age"(age in years), "married"(=1 if married), "black"(=1 if black), etc.There are 92 observations for unmarried people, and 774 observations for married people;768 observations for non-black people, and 98 observations for black people.
+The data set we use in this project is the publicly available data from a research of my major.It is a survey over 200 adults and contains 13 variables.The main variables include "wage"( monthly earnings), "hour"(average weekly hours),"IQ"(IQ score), "exper"(years of work experience),"age"(age in years), "married"(=1 if married), "black"(=1 if black), "urtban"(=1 if live in SMSA)etc.There are 24 observations for unmarried people, and 176 observations for married people;165 observations for non-black people, and 35 observations for black people.
 
 ```{R}
 library(tidyverse)
 # read your datasets in here, e.g., with read_csv()
 data_wage <- read_csv("new.csv")
-
-# if your dataset needs tidying, do so here
 
 ```
 
@@ -71,6 +69,15 @@ data_wage <- read_csv("new.csv")
 ```{R}
 library(cluster)
 # clustering code here
+wage_pam <- data_wage%>%pam(k=3)
+pamclust<-data_wage %>% mutate(cluster = as.factor(wage_pam$clustering))
+pamclust%>%ggplot(aes(KWW, wage, shape=cluster, color=black))+geom_point()
+
+pamclust<-data_wage %>% mutate(cluster = as.factor(wage_pam$clustering))
+pamclust%>%ggplot(aes(educ, wage, shape=cluster, color=urban))+geom_point()
+
+pamclust<-data_wage %>% mutate(cluster = as.factor(wage_pam$clustering))
+pamclust%>%ggplot(aes(IQ, wage, shape=cluster, color=married))+geom_point()
 
 sil_width <- vector()
 for (i in 2:10) {
@@ -88,7 +95,8 @@ data_wage%>% slice(wage_pam$id.med)
 
 library(GGally)
 data_wage %>% mutate(cluster = as.factor(wage_pam$clustering)) %>% 
-    ggpairs(cols = 2:8, aes(color = cluster))
+    ggpairs(columns =2:9, aes(color = cluster))
+
 ```
 
 Discussion of clustering here
@@ -98,6 +106,30 @@ Discussion of clustering here
 
 ```{R}
 # PCA code here
+data_wage2<-data_wage %>% select(-1,-10,-11,-12,-13)
+pca_data_wage2 <- princomp(data_wage2, cor = T)
+names(pca_data_wage2)
+summary(pca_data_wage2, loadings=T)
+
+eigval <-pca_data_wage2$sdev^2
+varprop=round(eigval/sum(eigval), 2)
+  
+ggplot() + geom_bar(aes(y=varprop, x=1:8), stat="identity") + xlab("") + geom_path(aes(y=varprop, x=1:8))+
+geom_text(aes(x=1:8, y=varprop, label=round(varprop, 2)), vjust=1, col="white", size=5)+
+scale_y_continuous(breaks=seq(0, .6, .2), labels = scales::percent) +
+scale_x_continuous(breaks=1:10)
+
+round(cumsum(eigval)/sum(eigval), 2)
+
+data_wage2 %>% mutate(PC1=pca_data_wage2$scores[, 1], PC2=pca_data_wage2$scores[, 2]) %>%
+ggplot(aes(PC1, PC2, color=data_wage$married)) + geom_point() + coord_fixed()
+
+library(factoextra)
+fviz_pca_biplot(pca_data_wage2)
+fviz_pca_biplot(pca_data_wage2, col.ind = data_wage$married, ) + coord_fixed()
+fviz_pca_biplot(pca_data_wage2, col.ind = data_wage$black, ) + coord_fixed()
+fviz_pca_biplot(pca_data_wage2, col.ind = data_wage$urban, ) + coord_fixed()
+
 ```
 
 Discussions of PCA here. 
