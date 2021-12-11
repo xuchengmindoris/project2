@@ -69,16 +69,7 @@ data_wage <- read_csv("new.csv")
 ```{R}
 library(cluster)
 # clustering code here
-wage_pam <- data_wage%>%pam(k=3)
-pamclust<-data_wage %>% mutate(cluster = as.factor(wage_pam$clustering))
-pamclust%>%ggplot(aes(KWW, wage, shape=cluster, color=black))+geom_point()
-
-pamclust<-data_wage %>% mutate(cluster = as.factor(wage_pam$clustering))
-pamclust%>%ggplot(aes(educ, wage, shape=cluster, color=urban))+geom_point()
-
-pamclust<-data_wage %>% mutate(cluster = as.factor(wage_pam$clustering))
-pamclust%>%ggplot(aes(IQ, wage, shape=cluster, color=married))+geom_point()
-
+#choose all variables
 sil_width <- vector()
 for (i in 2:10) {
     pam_fit <- pam(data_wage, k = i)
@@ -89,18 +80,58 @@ ggplot() + geom_line(aes(x = 1:10, y = sil_width)) +
 
 wage_pam <- data_wage%>%pam(k=3)
 plot(wage_pam)
-
 data_wage%>% slice(wage_pam$id.med)
 
+library(GGally)
+data_wage%>% mutate(cluster = as.factor(wage_pam$clustering)) %>% 
+    ggpairs(columns =2:9, aes(color = cluster))
+
+
+#Scatter gragh
+wage_pam <- data_wage%>%pam(k=3)
+pamclust<-data_wage %>% mutate(cluster = as.factor(wage_pam$clustering))
+pamclust%>%ggplot(aes(KWW, wage, shape=cluster, color=black))+geom_point()
+
+pamclust<-data_wage %>% mutate(cluster = as.factor(wage_pam$clustering))
+pamclust%>%ggplot(aes(educ, wage, shape=cluster, color=urban))+geom_point()
+
+pamclust<-data_wage %>% mutate(cluster = as.factor(wage_pam$clustering))
+pamclust%>%ggplot(aes(IQ, wage, shape=cluster, color=married))+geom_point()
+
+# Correlation for all numeric variables except "identity"
+data_wage2<-data_wage %>% select(-1,-10,-11,-12,-13)
+tidycor <- data_wage2%>%cor(use = "pair") %>% as.data.frame %>% rownames_to_column("var1") %>%  pivot_longer(-1, names_to = "var2", values_to = "correlation")
+tidycor %>% ggplot(aes(var1, var2, fill = correlation)) + 
+    geom_tile() + scale_fill_gradient2(low = "red", 
+    mid = "white", high = "blue") + geom_text(aes(label = round(correlation, 
+    2)), color = "black") + theme(axis.text.x = element_text(angle = 90, 
+    hjust = 1)) + coord_fixed()
+
+
+#choose three numeric variables
+data_wage3<-data_wage %>% select(3,6,9)
+sil_width <- vector()
+for (i in 2:10) {
+    pam_fit <- pam(data_wage3, k = i)
+    sil_width[i] <- pam_fit$silinfo$avg.width
+}
+ggplot() + geom_line(aes(x = 1:10, y = sil_width)) + 
+    scale_x_continuous(name = "k", breaks = 1:10)
+
+wage_pam_3 <- data_wage3%>%pam(k=2)
+plot(wage_pam_3)
+data_wage3%>% slice(wage_pam_3$id.med)
 
 library(GGally)
-data_wage %>% mutate(cluster = as.factor(wage_pam$clustering)) %>% 
-    ggpairs(columns =2:9, aes(color = cluster))
+data_wage3 %>% mutate(cluster = as.factor(wage_pam_3$clustering)) %>% 
+    ggpairs(columns =c('hours', 'educ', 'age', 'cluster'), aes(color = cluster))
 
 ```
 
 Discussion of clustering here
-    
+  First, I perform PAM clustering on all my variables,picking number of clusters (which is 3) based on largest average silhouette width;However, the average silhouette width is 0.49 which means that the structure is weak and could be artificial.Then I visualize the correlation between every two variables within our model by using ggpair() and correlation table-except binary variables,and we see education and IQ has the strongest positive correlation(0.58) compared with all other combinations here.
+  Then we take a look at KWW-wage,educ-wage,and IQ-wage to by using pam()function to see their positive relation straightforward combing with the binary variables(urban, married, black).
+  Last, we run three numeric variables(hours, educ,age) to see whether there are some improvements on average silhouette width, but it is 0.46 and the structure is still weak and could be artificial.Also virtualize it by ggpair as before. According to the sign of the coefficient we see they are all positively correlated with each other althogh the effect magnitede is small ( close to 0).
     
 ### Dimensionality Reduction with PCA
 
@@ -130,10 +161,12 @@ fviz_pca_biplot(pca_data_wage2, col.ind = data_wage$married, ) + coord_fixed()
 fviz_pca_biplot(pca_data_wage2, col.ind = data_wage$black, ) + coord_fixed()
 fviz_pca_biplot(pca_data_wage2, col.ind = data_wage$urban, ) + coord_fixed()
 
-#gower dissimilarities
 ```
 
 Discussions of PCA here. 
+For this part, we only focus on the data set which excludes meaningless variable(identity,etc.)and all binary variables, so there are 8 variables are used to approximate PCs.In addition, we need PCs to get 80% of the total variance and 6 PCs to get 90% of the total variance.
+We see for PC1,only "exper" coefficient is negative, which indicates that larger PC1,smaller "exper"but larger "wage"(and "hours","IQ","KWW","educ"); For PC2, only"educ"and"IQ" have negative coefficient, which indicates that the larger PC2 is,the smaller "IQ" and "educ" are but larger"KWW"(and "exper","tenure","age") ; For PC3,the only variables having negative coefficients are "educ"and "tenure",which indicates that the larger PC3, the smaller"educ"and "tenure" are,but larger "hours","exper","age" are; For PC4,the variables which have positive coefficients are "wage","KWW"and "exper", it means that the larger PC4 is , the larger"wage","KWW"and "exper" are, but smaller"hours","IQ" and "tenure" are;For PC5,the variables which have positive coefficients are "wage","hour","tenure", it mean the larger PC5 is, the larger "wage","hour","tenure",but lower "IQ"(and "KWW",etc.) are; For PC6,the only variables having negative coefficients are "educ" and "age", which means that the larger PC6 is, the smaller "educ" and "age" are, but larger "IQ"("educ"and "tenure");For PC7, only"KWW" has negative coefficient,which indicates that the larger PC7 is, the smaller"KWW" is but larger "wage"(and "IQ",etc.)are; For PC8,"KWW","educ" and "exper" have negative coefficients, it means the larger PC8 is,the smaller"KWW" (and "educ" etc.)are but larger"wage"(and "hour",etc.) are.
+
 
 ###  Linear Classifier
 
@@ -149,10 +182,10 @@ class_diag(probs, truth =class_dat$married, positive=1)
 y_hat <- ifelse(probs>0.5,"1","0")
 y_hat <- factor(y_hat, levels=c("0","1"))
 table(truth = class_dat$married, predictions=y_hat)
-#table
+
 
 ```
-
+Discussion:My model predicts new observations per CV AUC fair because AUC is 0.7076.
 ```{R}
 # cross-validation of linear classifier here
 #K-fold CV
@@ -177,8 +210,8 @@ summarize_all(diags,mean)
 
 
 ```
-
 Discussion here
+My model predicts new observations per CV AUC poor because AUC is only 0.62.And there is a signal of overfitting because there is a big drop in AUC in K-fold CV comparing with before.
 
 ### Non-Parametric Classifier
 
@@ -195,7 +228,7 @@ y_hat_knn <- factor(y_hat_knn, levels=c("0","1"))
 table(truth = class_dat$married, predictions=y_hat_knn)
 
 ```
-
+Discussion: My model could predict new observations good becuase the AUC us 0.87. 
 ```{R}
 # cross-validation of np classifier here
 library(caret)
@@ -221,6 +254,7 @@ summarize_all(diags,mean)
 ```
 
 Discussion
+However, by using CV, we see AUC is only 0.54 and that indicates that the model predicts bad! Moreover, it also indicates that there is a signal of overfitting because of a big drop in AUC. Compared with the linear model, nonparametric model in its cross-validation perform worse although it performs better than linear model not in CV.
 
 
 ### Regression/Numeric Prediction
@@ -261,6 +295,7 @@ mean(MSE)
 ```
 
 Discussion
+There is no signal of overfitting because there is a very little decrease between mean of MSE not in CV(142.2) and mean of MSE in CV (141.9)
 
 ### Python 
 
@@ -285,10 +320,13 @@ cat(c(py$next2 ,wage_mean))
 ```
 
 Discussion
+First, I use R to define the meaning/function for mean and median of the most important variable in this model--wage.Then I use python chunk to define the two sentences to describe the conclusion, as well as print out the full conclusion for the median of wage in words by combining the sentence defined in python and the function/result defining in R using r..
+Next, I use R chunk to connect the sentence defined in Python chunk with another function/result we defined in the previous R chunk(mean of wage)by using py$, and finally got the full conclusion sentence for mean wage.
 
 ### Concluding Remarks
 
 Include concluding remarks here, if any
+According to this study, we see wage is positively related to age, eduction, hours of work,IQ, knowledge about the world, and the years in current position. Hence, to get a good job and higher salary we need to work hard both in universities and in companies. MOst obviously, IQ is highly positively related to education. Additionally, the model(married~.)performs not so good both in linear classifier and non-parametric classifier,and we should not need to keep this model anymore, and the model (IQ ~educ+KWW+exper) used on this study shows no overfitting signal, hence we may could use it to explore more further more.
 
 
 
